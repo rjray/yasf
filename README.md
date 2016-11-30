@@ -43,7 +43,7 @@ for my $file (@file_list) {
 }
 ```
 
-Object references can be uses also, in which case the key is called as a method
+Object references can be used also, in which case the key is called as a method
 with no arguments:
 
 ```perl
