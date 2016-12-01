@@ -125,17 +125,22 @@ sub bind { ## no critic(ProhibitBuiltinHomonyms)
         Regexp  => 1,
     };
 
-    croak 'bind: New bindings must be provided as a parameter'
-        if (! $bindings);
+    if ((@_ == 2) && (! defined $bindings)) {
+        # The means of unbinding is to call $obj->bind(undef):
+        undef $self->{binding};
+    } else {
+        croak 'bind: New bindings must be provided as a parameter'
+            if (! $bindings);
 
-    my $type = ref $bindings;
-    if ($not_acceptable->{$type}) {
-        croak "New bindings reference type ($type) not usable";
-    } elsif (! $type) {
-        croak 'New bindings value must be a reference (HASH, ARRAY or object)';
+        my $type = ref $bindings;
+        if ($not_acceptable->{$type}) {
+            croak "New bindings reference type ($type) not usable";
+        } elsif (! $type) {
+            croak 'New bindings must be a reference (HASH, ARRAY or object)';
+        }
+
+        $self->{binding} = $bindings;
     }
-
-    $self->{binding} = $bindings;
 
     return $self;
 }
@@ -573,6 +578,9 @@ meet these criteria (or is not given), an exception is thrown via B<croak>.
 If an object has a bound data structure, but is interpolated with C<%> or
 B<format> with an explicit binding, the explicit binding will supercede the
 internal binding (but without replacing it permanently).
+
+You can unbind data from the object by calling B<bind> with C<undef> as the
+argument.
 
 =item B<format>
 
