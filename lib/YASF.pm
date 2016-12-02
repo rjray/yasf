@@ -28,6 +28,13 @@ use warnings;
 package YASF;
 
 use overload fallback => 0,
+    'eq'  => \&_eq,
+    'ne'  => \&_ne,
+    'lt'  => \&_lt,
+    'le'  => \&_le,
+    'gt'  => \&_gt,
+    'ge'  => \&_ge,
+    'cmp' => \&_cmp,
     q{""} => \&_stringify,
     q{%}  => \&_interpolate;
 
@@ -147,120 +154,6 @@ sub bind { ## no critic(ProhibitBuiltinHomonyms)
 
 ###############################################################################
 #
-#   Sub Name:       _compile
-#
-#   Description:    Private sub that is a front-end to the recursive sub
-#                   _compile_segment.
-#
-#   Arguments:      NAME      IN/OUT  TYPE      DESCRIPTION
-#                   $self     in      ref       Object of this class
-#
-#   Returns:        Success:    void
-#                   Failure:    dies
-#
-###############################################################################
-sub _compile {
-    my $self = shift;
-
-    $self->{_compiled} = $self->_compile_segment($self->template);
-
-    return;
-}
-
-###############################################################################
-#
-#   Sub Name:       _compile_segment
-#
-#   Description:    Private sub that compiles a segment of the template.
-#                   Creates a listref of constant parts (strings) and nested
-#                   expansion parts (listrefs).
-#
-#   Arguments:      NAME      IN/OUT  TYPE      DESCRIPTION
-#                   $self     in      ref       Object of this class
-#                   $segment  in      scalar    Text to be parsed into chunks
-#                                                 for the formatter to use
-#
-#   Globals:        $TOKEN_RE
-#
-#   Returns:        Success:    array reference
-#                   Failure:    dies
-#
-###############################################################################
-sub _compile_segment {
-    my ($self, $segment) = @_;
-    my (@tokens, @compiled, $pos);
-
-    while ($segment =~ /$TOKEN_RE/g) {
-        push @tokens, [ $1, $LAST_MATCH_START[1], $LAST_MATCH_END[1] ];
-    }
-
-    $pos = 0;
-    for my $token (@tokens) {
-        my ($subsegment, $start, $end) = @{$token};
-        if (my $len = $start - $pos) {
-            push @compiled, substr $segment, $pos, $len;
-        }
-        push @compiled, $self->_compile_segment(substr $subsegment, 1, -1);
-        $pos = $end;
-    }
-
-    if ($pos < length $segment) {
-        push @compiled, substr $segment, $pos;
-    }
-
-    return \@compiled;
-}
-
-###############################################################################
-#
-#   Sub Name:       _stringify
-#
-#   Description:    Private sub that handles the stringification of the object
-#
-#   Arguments:      NAME      IN/OUT  TYPE      DESCRIPTION
-#                   $self     in      ref       Object of this class
-#
-#   Returns:        Success:    string
-#                   Failure:    dies
-#
-###############################################################################
-sub _stringify {
-    my $self = shift;
-    my $binding = $self->binding;
-
-    return $binding ? $self->format($binding) : $self->template;
-}
-
-###############################################################################
-#
-#   Sub Name:       _interpolate
-#
-#   Description:    Private sub that handles the % interpolation of the object
-#
-#   Arguments:      NAME      IN/OUT  TYPE      DESCRIPTION
-#                   $self     in      ref       Object of this class
-#                   $bindings in      ref       The bindings passed to %
-#                   $swap     in      scalar    A boolean that indicates if
-#                                                 the object was before or
-#                                                 after the operator
-#
-#   Returns:        Success:    string
-#                   Failure:    dies
-#
-###############################################################################
-sub _interpolate {
-    my ($self, $bindings, $swap) = @_;
-
-    if ($swap) {
-        my $class = ref $self;
-        croak "$class object must come first in % interpolation";
-    }
-
-    return $self->format($bindings);
-}
-
-###############################################################################
-#
 #   Sub Name:       format
 #
 #   Description:    Front-end to the recursive _format routine, which does the
@@ -293,22 +186,46 @@ sub format { ## no critic(ProhibitBuiltinHomonyms)
     return $value;
 }
 
-###############################################################################
-#
-#   Sub Name:       _format
-#
-#   Description:    Private sub that does the hard and recursive part of the
-#                   actual formatting. Only it isn't that hard, mostly just
-#                   recursive.
-#
-#   Arguments:      NAME      IN/OUT  TYPE      DESCRIPTION
-#                   $self     in      ref       Object of this class
-#                   $bindings in      ref       Bindings to format with
-#
-#   Returns:        Success:    string
-#                   Failure:    dies
-#
-###############################################################################
+# Private functions that support the public API:
+
+# Front-end to the recursive _compile_segment:
+sub _compile {
+    my $self = shift;
+
+    $self->{_compiled} = $self->_compile_segment($self->template);
+
+    return;
+}
+
+# Compiles a segment of the template. Creates an arrayref of constant parts
+# (strings) and nested expansion parts (arrayrefs). Uses the $TOKEN_RE global.
+sub _compile_segment {
+    my ($self, $segment) = @_;
+    my (@tokens, @compiled, $pos);
+
+    while ($segment =~ /$TOKEN_RE/g) {
+        push @tokens, [ $1, $LAST_MATCH_START[1], $LAST_MATCH_END[1] ];
+    }
+
+    $pos = 0;
+    for my $token (@tokens) {
+        my ($subsegment, $start, $end) = @{$token};
+        if (my $len = $start - $pos) {
+            push @compiled, substr $segment, $pos, $len;
+        }
+        push @compiled, $self->_compile_segment(substr $subsegment, 1, -1);
+        $pos = $end;
+    }
+
+    if ($pos < length $segment) {
+        push @compiled, substr $segment, $pos;
+    }
+
+    return \@compiled;
+}
+
+# Does the hard and recursive part of the actual formatting. Not actually that
+# hard, but pretty recursive.
 sub _format {
     my ($self, $bindings, @elements) = @_;
 
@@ -322,22 +239,7 @@ sub _format {
     return $self->_expr_to_value($bindings, $expr);
 }
 
-###############################################################################
-#
-#   Sub Name:       _expr_to_value
-#
-#   Description:    Private sub that converts a key expression like "a.b.c"
-#                   into a value from the bindings.
-#
-#   Arguments:      NAME      IN/OUT  TYPE      DESCRIPTION
-#                   $self     in      ref       Object of this class
-#                   $bindings in      ref       Bindings to use for replacing
-#                   $string   in      scalar    Expression to evaluate
-#
-#   Returns:        Success:    string
-#                   Failure:    dies
-#
-###############################################################################
+# Converts an expression like "a.b.c" into a value from the bindings
 sub _expr_to_value {
     my ($self, $bindings, $string) = @_;
 
@@ -374,6 +276,82 @@ sub _expr_to_value {
             'scalar';
     }
     return $node;
+}
+
+# Actual operator-overload functions:
+
+# Handle the object stringification (the "" operator)
+sub _stringify {
+    my $self = shift;
+    my $binding = $self->binding;
+
+    return $binding ? $self->format($binding) : $self->template;
+}
+
+# Handle the % interpolation operator
+sub _interpolate {
+    my ($self, $bindings, $swap) = @_;
+
+    if ($swap) {
+        my $class = ref $self;
+        croak "$class object must come first in % interpolation";
+    }
+
+    return $self->format($bindings);
+}
+
+# Handle the 'cmp' operator
+sub _cmp {
+    my ($self, $other, $swap) = @_;
+
+    return $swap ?
+        ($other cmp $self->_stringify) : ($self->_stringify cmp $other);
+}
+
+# Handle the 'eq' operator
+sub _eq {
+    my ($self, $other, $swap) = @_;
+
+    return $self->_stringify eq $other;
+}
+
+# Handle the 'ne' operator
+sub _ne {
+    my ($self, $other, $swap) = @_;
+
+    return $self->_stringify ne $other;
+}
+
+# Handle the 'lt' operator
+sub _lt {
+    my ($self, $other, $swap) = @_;
+
+    return $swap ?
+        ($other lt $self->_stringify) : ($self->_stringify lt $other);
+}
+
+# Handle the 'le' operator
+sub _le {
+    my ($self, $other, $swap) = @_;
+
+    return $swap ?
+        ($other le $self->_stringify) : ($self->_stringify le $other);
+}
+
+# Handle the 'gt' operator
+sub _gt {
+    my ($self, $other, $swap) = @_;
+
+    return $swap ?
+        ($other gt $self->_stringify) : ($self->_stringify gt $other);
+}
+
+# Handle the 'ge' operator
+sub _ge {
+    my ($self, $other, $swap) = @_;
+
+    return $swap ?
+        ($other ge $self->_stringify) : ($self->_stringify ge $other);
 }
 
 1;
