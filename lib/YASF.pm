@@ -140,10 +140,10 @@ sub bind { ## no critic(ProhibitBuiltinHomonyms)
             if (! $bindings);
 
         my $type = ref $bindings;
-        if ($not_acceptable->{$type}) {
-            croak "New bindings reference type ($type) not usable";
-        } elsif (! $type) {
+        if (! $type) {
             croak 'New bindings must be a reference (HASH, ARRAY or object)';
+        } elsif ($not_acceptable->{$type}) {
+            croak "New bindings reference type ($type) not usable";
         }
 
         $self->{binding} = $bindings;
@@ -259,6 +259,9 @@ sub _expr_to_value {
         } else {
             if (ref $node eq 'HASH') {
                 $node = $node->{$key};
+            } elsif (ref $node eq 'ARRAY') {
+                croak "Key-type mismatch (key $key) in $expr, node is an " .
+                    'ARRAY ref when expecting HASH or object';
             } elsif (ref $node) {
                 $node = $node->$key();
             } else {
@@ -273,7 +276,7 @@ sub _expr_to_value {
     # as a ref, which is probably not what the caller intended.
     if (ref $node) {
         carp "Format expression $expr yielded a reference value rather than " .
-            'scalar';
+            'a scalar';
     }
     return $node;
 }
