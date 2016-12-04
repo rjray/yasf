@@ -14,13 +14,9 @@ my $master_data = {
     one    => 1,
     two    => 2,
     three  => 3,
-    four   => 4,
-    five   => 5,
     month1 => 'January',
     month2 => 'February',
     month3 => 'March',
-    month4 => 'April',
-    month5 => 'May',
 };
 
 plan tests => 8;
