@@ -472,9 +472,9 @@ ignored.
 
 =head1 OVERLOADED OPERATORS
 
-The B<YASF> class overrides a small number of operators. Any operators not
-explicitly listed here will not fall back to any Perl defaults, they will
-instead trigger a run-time error.
+The B<YASF> class overrides a number of operators. Any operators not explicitly
+listed here will not fall back to any Perl defaults, they will instead trigger
+a run-time error.
 
 =over 4
 
@@ -507,7 +507,7 @@ the resulting string is used.
 
 =item 2.
 
-If the object has not object-level binding, then the uninterpolated template
+If the object has no object-level binding, then the uninterpolated template
 string will be used.
 
 =back
@@ -516,7 +516,17 @@ You do not need to explicitly use double-quotes to trigger this; anywhere the
 object would be used as a string (printing, hash keys, etc.), this will be the
 behavior.
 
+=item String Comparison (C<cmp>, C<eq>, etc.)
+
+The string comparison operators (C<cmp>, C<eq>, C<ne>, C<lt>, C<le>, C<gt>,
+C<ge>) are all overloaded to stringify the B<YASF> object before doing the
+actual comparison. As with C<"">, if no object-level bindings exist then the
+stringification is just the template string itself.
+
 =back
+
+Other operators may be overloaded in the future, as deemed useful or
+necessary.
 
 =head1 SUBROUTINES/METHODS
 
