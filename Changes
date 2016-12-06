@@ -1,4 +1,7 @@
 Revision history for Perl module YASF
 
+0.002 - 2016-12-05
+  - Change Perl min version for now
+  - Some dzil plugin adjustments
 0.001 - 2016-12-04
   - Initial release
