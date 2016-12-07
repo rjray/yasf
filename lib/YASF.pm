@@ -21,12 +21,12 @@
 #
 ###############################################################################
 
-use 5.014;
 use strict;
 use warnings;
 
 package YASF;
 
+use 5.014;
 use overload fallback => 0,
     'eq'  => \&_eq,
     'ne'  => \&_ne,
@@ -173,14 +173,12 @@ sub bind { ## no critic(ProhibitBuiltinHomonyms)
 sub format { ## no critic(ProhibitBuiltinHomonyms)
     my ($self, $bindings) = @_;
 
-    ## no critic(BuiltinFunctions::ProhibitUselessTopic)
-
     $bindings ||= $self->binding;
     croak 'format: Bindings are required if object has no internal binding'
         if (! $bindings);
 
     my $value = join q{} =>
-        map { ref($_) ? $self->_format($bindings, @{$_}) : $_ }
+        map { ref() ? $self->_format($bindings, @{$_}) : $_ }
         @{$self->{_compiled}};
 
     return $value;
@@ -229,12 +227,10 @@ sub _compile_segment {
 sub _format {
     my ($self, $bindings, @elements) = @_;
 
-    ## no critic(BuiltinFunctions::ProhibitUselessTopic)
-
     # Slight duplication of code from format() here, but it saves having to
     # keep track of depth and do a conditional on every return.
     my $expr = join q{} =>
-        map { ref($_) ? $self->_format($bindings, @{$_}) : $_ } @elements;
+        map { ref() ? $self->_format($bindings, @{$_}) : $_ } @elements;
 
     return $self->_expr_to_value($bindings, $expr);
 }
