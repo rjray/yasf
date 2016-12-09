@@ -2,7 +2,7 @@
 
 # Basic tests on object properties (accessors, etc.)
 
-use 5.010;
+use 5.008;
 use strict;
 use warnings;
 
