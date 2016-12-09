@@ -15,7 +15,8 @@
 #
 #   Libraries:      None (only core)
 #
-#   Global Consts:  $TOKEN_RE
+#   Global Consts:  @EXPORT_OK
+#                   %NOT_ACCEPTABLE_REF
 #
 #   Environment:    None
 #
@@ -26,7 +27,7 @@ use warnings;
 
 package YASF;
 
-use 5.014;
+use 5.008;
 use overload fallback => 0,
     'eq'  => \&_eq,
     'ne'  => \&_ne,
@@ -50,8 +51,19 @@ BEGIN {
     }
 }
 
+my %NOT_ACCEPTABLE_REF = (
+    SCALAR  => 1,
+    CODE    => 1,
+    REF     => 1,
+    GLOB    => 1,
+    LVALUE  => 1,
+    FORMAT  => 1,
+    IO      => 1,
+    VSTRING => 1,
+    Regexp  => 1,
+);
+
 our @EXPORT_OK = qw(YASF);
-my $TOKEN_RE = qr/(?^:((?:(?<!\\)[{](?:(?>[^{}]+)|(?-1))*(?<!\\)[}])))/x;
 
 ###############################################################################
 #
@@ -113,24 +125,14 @@ sub new {
 #                   $self     in      ref       Object of this class
 #                   $bindings in      ref       New bindings
 #
+#   Globals:        %NOT_ACCEPTABLE_REF
+#
 #   Returns:        Success:    $self
 #                   Failure:    dies
 #
 ###############################################################################
 sub bind { ## no critic(ProhibitBuiltinHomonyms)
     my ($self, $bindings) = @_;
-
-    state $not_acceptable = {
-        SCALAR  => 1,
-        CODE    => 1,
-        REF     => 1,
-        GLOB    => 1,
-        LVALUE  => 1,
-        FORMAT  => 1,
-        IO      => 1,
-        VSTRING => 1,
-        Regexp  => 1,
-    };
 
     if ((@_ == 2) && (! defined $bindings)) {
         # The means of unbinding is to call $obj->bind(undef):
@@ -142,7 +144,7 @@ sub bind { ## no critic(ProhibitBuiltinHomonyms)
         my $type = ref $bindings;
         if (! $type) {
             croak 'New bindings must be a reference (HASH, ARRAY or object)';
-        } elsif ($not_acceptable->{$type}) {
+        } elsif ($NOT_ACCEPTABLE_REF{$type}) {
             croak "New bindings reference type ($type) not usable";
         }
 
@@ -186,44 +188,77 @@ sub format { ## no critic(ProhibitBuiltinHomonyms)
 
 # Private functions that support the public API:
 
-# Front-end to the recursive _compile_segment:
+# Compile the template into a tree structure that can be easily traversed for
+# formatting.
 sub _compile {
     my $self = shift;
 
-    $self->{_compiled} = $self->_compile_segment($self->template);
+    my @tokens = $self->_tokenize;
 
-    return;
+    my @stack = ([]);
+    my $level = 0;
+    my @opens = ();
+
+    while (my ($type, $value) = splice @tokens, 0, 2) {
+        if ($type eq 'STRING') {
+            push @{$stack[$level]}, $value;
+        } elsif ($type eq 'OPEN') {
+            push @stack, [];
+            $level++;
+            push @opens, $value;
+        } elsif ($type eq 'CLOSE') {
+            if ($level) {
+                my $subtree = pop @stack;
+                $level--;
+                push @{$stack[$level]}, $subtree;
+                pop @opens;
+            } else {
+                croak "Unmatched closing brace at position $value";
+            }
+        } else {
+            croak "Unknown token type: $type\n";
+        }
+    }
+
+    if ($level) {
+        croak sprintf '%d unmatched opening brace%s, last at position %d',
+            $level, $level == 1 ? q{} : 's', pop @opens;
+    }
+
+    $self->{_compiled} = $stack[0];
+    return $self;
 }
 
-# Compiles a segment of the template. Creates an arrayref of constant parts
-# (strings) and nested expansion parts (arrayrefs). Uses the $TOKEN_RE global.
-sub _compile_segment {
-    my ($self, $segment) = @_;
-    my (@tokens, @compiled, $pos);
+# Tokenize the object's template into a sequence of (type, value) pairs that
+# identify the opening and closing braces, and ordinary strings.
+sub _tokenize {
+    my $self = shift;
 
-    while ($segment =~ /$TOKEN_RE/g) {
-        push @tokens, [ $1, $LAST_MATCH_START[1], $LAST_MATCH_END[1] ];
-    }
+    my (@list, $base, $pos, $len);
+    my $str = $self->template;
 
-    $pos = 0;
-    for my $token (@tokens) {
-        my ($subsegment, $start, $end) = @{$token};
-        if (my $len = $start - $pos) {
-            push @compiled, substr $segment, $pos, $len;
+    $base = 0;
+    while ($str =~ /(?<!\\)(?=[{}])/g) {
+        $pos = pos $str;
+        if ($len = $pos - $base) {
+            (my $piece = substr $str, $base, $len) =~ s/\\([{}])/$1/g;
+            push @list, 'STRING', $piece;
         }
-        push @compiled, $self->_compile_segment(substr $subsegment, 1, -1);
-        $pos = $end;
+        push @list, ('{' eq substr $str, $pos, 1) ? 'OPEN' : 'CLOSE';
+        push @list, $pos;
+        $base = $pos + 1;
     }
 
-    if ($pos < length $segment) {
-        push @compiled, substr $segment, $pos;
+    if (length($str) > $base) {
+        (my $piece = substr $str, $base) =~ s/\\([{}])/$1/g;
+        push @list, 'STRING', $piece;
     }
 
-    return \@compiled;
+    return @list;
 }
 
 # Does the hard and recursive part of the actual formatting. Not actually that
-# hard, but pretty recursive.
+# hard, but a little recursive.
 sub _format {
     my ($self, $bindings, @elements) = @_;
 
