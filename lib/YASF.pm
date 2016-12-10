@@ -468,6 +468,24 @@ endless recursion. That is, if C<subkey> evaluated to C<{key2}>, it would
 B<not> result in C<key2> being interpolated. Instead, a literal key of
 C<{key2}> would be looked up on the hash reference that C<key> yields.
 
+Because curly braces are used to delimit keys, if you want a curly brace (of
+either orientation) in your string you will need to escape it with a
+backslash character:
+
+    $str = YASF->new('\{{key}\}');
+
+or
+
+    $str = YASF->new("\\{{key}\\}");
+
+The escaped characters will be converted when the template is compiled
+internally.
+
+A key may be made up of any characters, though for readability it is
+recommended that you stay with alphanumerics. The only character that cannot
+be used in a key is the colon (C<:>), as this is used to delimit a key from
+a formatting specification (see L</Formatting Syntax>).
+
 =head2 Using Objects in the Bindings
 
 If an element within the bindings data structure is an object, the key for
@@ -495,11 +513,13 @@ binding:
 =head2 Formatting Syntax
 
 Python's C<format> also supports an extensive syntax for formatting the data
-that gets substituted.
+that gets substituted. A format specification is given in the key, as a string
+sequence separated from the key itself by a colon:
 
-This is not provided in this initial release of B<YASF>, but will be added
-in a future release. For now, if a formatting string is detected it will be
-ignored.
+    {key1.key2:6.2f}
+
+This is not yet implemented in B<YASF>, but will be added in a future release.
+For now, if a formatting string is detected it will be ignored.
 
 =head1 OVERLOADED OPERATORS
 
