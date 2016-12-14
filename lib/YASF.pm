@@ -206,7 +206,7 @@ sub _compile {
             push @stack, [];
             $level++;
             push @opens, $value;
-        } elsif ($type eq 'CLOSE') {
+        } else {
             if ($level) {
                 my $subtree = pop @stack;
                 $level--;
@@ -215,8 +215,6 @@ sub _compile {
             } else {
                 croak "Unmatched closing brace at position $value";
             }
-        } else {
-            croak "Unknown token type: $type\n";
         }
     }
 
