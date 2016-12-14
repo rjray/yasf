@@ -40,7 +40,6 @@ use overload fallback => 0,
     q{%}  => \&_interpolate;
 
 use Carp qw(carp croak);
-use English qw(-no_match_vars);
 use Exporter qw(import);
 
 BEGIN {
