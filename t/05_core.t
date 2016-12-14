@@ -12,7 +12,7 @@ use Test::More;
 
 use YASF;
 
-plan tests => 20;
+plan tests => 27;
 
 # I use Perl::Critic on tests. These two policies are not important in this
 # suite:
@@ -40,6 +40,11 @@ $bind = {};
 $str = YASF->new('{bar}', binding => $bind);
 isa_ok($str, 'YASF', '$str');
 is($str->binding, $bind, 'binding() method (non-undef)');
+
+# Proper constructor (3) (hashref args)
+$str = YASF->new('{bar}', { binding => $bind });
+isa_ok($str, 'YASF', '$str');
+is($str->binding, $bind, 'binding() method (non-undef 2)');
 
 # Error cases for the bind() method
 $result = eval { $str->bind; };
@@ -86,5 +91,23 @@ like($@, qr/object must come first in % interpolation/i, '% param order');
 
 # Expected operator behavior
 is($str cmp '{node.0}', 0, 'cmp operator');
+is('{node.0}' cmp $str, 0, 'cmp operator (2)');
+
+# Try "parsing" a really deep nesting
+my $pat = ('{' x 80) . 'foo' . ('}' x 80);
+$str = YASF->new($pat);
+isa_ok($str, 'YASF', '$str');
+
+# Some parsing error cases
+
+$str = eval { YASF->new('{foo}}'); };
+like($@, qr/unmatched closing brace at position 5/i,
+     'Unbalanced closing brace');
+$str = eval { YASF->new('{{foo}'); };
+like($@, qr/1 unmatched opening brace, last at position 0/i,
+     'Unbalanced opening brace');
+$str = eval { YASF->new('{key1.{key2}} \{and\} {{{key3}'); };
+like($@, qr/2 unmatched opening braces, last at position 23/i,
+     'Unbalanced opening brace');
 
 exit;

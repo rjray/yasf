@@ -19,7 +19,7 @@ my $master_data = {
     month3 => 'March',
 };
 
-plan tests => 8;
+plan tests => 9;
 
 my ($str, $data);
 
@@ -47,5 +47,10 @@ $str = YASF->new('{month{one}} {month{two}} {month{three}}');
 is($str % $master_data, 'January February March', 'Basic %, nested keys');
 is($str->format($master_data), 'January February March',
    'Basic format(), nested keys');
+
+# Make sure leading and trailing content is preserved.
+$str = YASF->new('pre 1={one} 2={two} 3={three} post');
+is($str % $master_data, 'pre 1=1 2=2 3=3 post',
+   'Prefix and postfix in templates');
 
 exit;
