@@ -1,5 +1,11 @@
 Revision history for Perl module YASF
 
+0.004 - 2016-12-14
+  - More tests, based on coverage analysis.
+  - Removed useless elsif and croak.
+  - No longer needs the English module.
+  - Added . and .= operators, and tests for them.
+  - Documented the . and .= operators.
 0.003 - 2016-12-09
   - Add a local perlcritic file, and perlcritic testing.
   - Fix some perlcritic issues.
