@@ -593,6 +593,18 @@ C<ge>) are all overloaded to stringify the B<YASF> object before doing the
 actual comparison. As with C<"">, if no object-level bindings exist then the
 stringification is just the template string itself.
 
+=item String Concatenation (C<.> and C<.=>)
+
+The string concatenation operators, C<.> and C<.=>, are also overloaded. The
+C<.> operator always stringifies the object involved in the operation (with
+the same effect as the comparison operators when no bindings exist), regardless
+of which side of the operator it appears on.
+
+The C<.=> operator, however, can only accept a B<YASF> object on the right-hand
+side. This is because B<YASF> template strings are (currently) read-only. If
+you try to use an object on the left-hand side of C<.=>, an exception is
+thrown.
+
 =back
 
 Other operators may be overloaded in the future, as deemed useful or
