@@ -36,6 +36,8 @@ use overload fallback => 0,
     'gt'  => \&_gt,
     'ge'  => \&_ge,
     'cmp' => \&_cmp,
+    q{.}  => \&_dot,
+    q{.=} => \&_dotequal,
     q{""} => \&_stringify,
     q{%}  => \&_interpolate;
 
@@ -383,6 +385,26 @@ sub _ge {
 
     return $swap ?
         ($other ge $self->_stringify) : ($self->_stringify ge $other);
+}
+
+# Handle the '.' operator
+sub _dot {
+    my ($self, $other, $swap) = @_;
+
+    return $swap ?
+        $other . $self->_stringify : $self->_stringify . $other;
+}
+
+# Handle the '.=' operator
+sub _dotequal {
+    my ($self, $other, $swap) = @_;
+
+    if (! $swap) {
+        my $class = ref $self;
+        croak "$class object cannot be on the left of .=";
+    }
+
+    return $other . $self->_stringify;
 }
 
 1;

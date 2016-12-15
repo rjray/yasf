@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Basic tests on interpolating against hash references
+# Basic tests on misc operators not covered by other suites.
 
 use 5.008;
 use strict;
@@ -16,7 +16,7 @@ my $master_data = {
     c => 'c',
 };
 
-plan tests => 21;
+plan tests => 27;
 
 my $aaa = YASF->new('{a}{a}{a}', binding => $master_data);
 my $baa = YASF->new('{b}{a}{a}', binding => $master_data);
@@ -55,5 +55,19 @@ ok('aaa' ge $aaa, 'ge - str ge obj (1)');
 ok('bbb' ge $baa, 'ge - str ge obj (2)');
 ok($aaa ge $aaa,  'ge - obj ge obj (1)');
 ok($baa ge $aaa,  'ge - obj ge obj (2)');
+
+# .
+ok($aaa . 'b' eq 'aaab',    '. - obj on lhs');
+ok('b' . $aaa eq 'baaa',    '. - obj on rhs');
+ok($aaa . $bbb eq 'aaabbb', '. - both obj');
+
+# .=
+my $str = 'str';
+$str .= $aaa;
+ok($str eq 'straaa', '.= - obj on rhs');
+eval { $aaa .= $str; };
+like($@, qr/cannot be on the left of [.]=/i, '.= - obj on lhs');
+eval { $bbb .= $ccc; };
+like($@, qr/cannot be on the left of [.]=/i, '.= - both obj');
 
 exit;
