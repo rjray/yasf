@@ -12,7 +12,7 @@ use Test::More;
 
 use YASF;
 
-plan tests => 27;
+plan tests => 29;
 
 # I use Perl::Critic on tests. These two policies are not important in this
 # suite:
@@ -28,6 +28,12 @@ local $SIG{__WARN__} = sub {
 # Try the constructor with no args (should fail)
 $result = eval { $str = YASF->new; };
 like($@, qr/new requires string template/i, 'Empty constructor fails');
+
+# Try the constructor with something that would evaluate as false (should pass)
+$str = YASF->new(q{});
+isa_ok($str, 'YASF', '$str (null string)');
+$str = YASF->new(0);
+isa_ok($str, 'YASF', '$str (0 value)');
 
 # Proper constructor call
 $str = YASF->new('{foo}');
