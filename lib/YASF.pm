@@ -22,12 +22,11 @@
 #
 ###############################################################################
 
-use strict;
-use warnings;
-
 package YASF;
 
 use 5.008;
+use strict;
+use warnings;
 use overload fallback => 0,
     'eq'  => \&_eq,
     'ne'  => \&_ne,
@@ -43,6 +42,8 @@ use overload fallback => 0,
 
 use Carp qw(carp croak);
 use Exporter qw(import);
+
+# VERSION
 
 BEGIN {
     no strict 'refs'; ## no critic (ProhibitNoStrict)
@@ -103,7 +104,7 @@ sub new {
     my ($class, $template, @args) = @_;
 
     croak "${class}::new requires string template argument"
-        if (! $template);
+        if (! defined $template);
 
     my $args = @args == 1 ? $args[0] : { @args };
     my $self = bless { template => $template, binding => undef }, $class;
