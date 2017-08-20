@@ -10,43 +10,40 @@ use Test::More;
 
 use YASF;
 
-my $master_data = {
+my $data = {
     a => 'a',
     b => 'b',
     c => 'c',
 };
 
-plan tests => 8;
+plan tests => 11;
 
 my $with_warn = YASF->new(
     '{a}{b}{c}{unknown}',
-    bindings => $master_data,
+    bindings => $data,
     on_undef => 'warn'
 );
 my $with_die = YASF->new(
     '{a}{b}{c}{unknown}',
-    bindings => $master_data,
+    bindings => $data,
     on_undef => 'die'
 );
 my $with_ignore = YASF->new(
     '{a}{b}{c}{unknown}',
-    bindings => $master_data,
+    bindings => $data,
     on_undef => 'ignore'
 );
 my $with_token = YASF->new(
     '{a}{b}{c}{unknown}',
-    bindings => $master_data,
+    bindings => $data,
     on_undef => 'token'
 );
-my $with_default = YASF->new(
-    '{a}{b}{c}{unknown}',
-    bindings => $master_data
-);
+my $with_default = YASF->new('{a}{b}{c}{unknown}', bindings => $data);
 
 my $caught;
+local $SIG{__WARN__} = sub { $caught = shift; };
 
 # Test warn-type and default (which should be 'warn'):
-local $SIG{__WARN__} = sub { $caught = shift; };
 is("$with_warn", 'abc', 'warn (1)');
 like($caught, qr/No binding for reference to 'unknown'/, 'warn (2)');
 $caught = q{};
@@ -72,5 +69,9 @@ if ($retval) {
     pass('die (1)');
 }
 like($@, qr/No binding for reference to 'unknown'/, 'die (2)');
+
+# From this point, just use 'token' and 'ignore' styles.
+my $obj = YASF->new('{unknown{a}}', bindings => $data, on_undef => 'token');
+is("$obj", '{unknowna}', 'compound key 1');
 
 exit;
